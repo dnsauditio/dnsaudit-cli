@@ -7,12 +7,22 @@ A fast, robust, and professional command-line interface for the [DNSAudit.io](ht
 As a Go binary, `dnsaudit` has zero dependencies. Simply compile the binary and move it to your path:
 
 ```bash
-# Clone the repository (if applicable)
+# Clone the repository
 git clone https://github.com/dnsaudit/cli dnsaudit-cli
 cd dnsaudit-cli
 
-# Build the binary
+# Build for your current system
 go build -o dnsaudit main.go
+
+# --- Cross-Compilation ---
+# Build for Windows
+GOOS=windows GOARCH=amd64 go build -o dnsaudit-windows.exe main.go
+
+# Build for Linux
+GOOS=linux GOARCH=amd64 go build -o dnsaudit-linux-amd64 main.go
+
+# Build for Mac (Apple Silicon / ARM64)
+GOOS=darwin GOARCH=arm64 go build -o dnsaudit-mac-arm64 main.go
 
 # (Optional) Move to your path for global access
 sudo mv dnsaudit /usr/local/bin/
