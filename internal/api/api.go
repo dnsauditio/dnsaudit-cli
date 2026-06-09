@@ -20,7 +20,7 @@ func NewClient(apiKey string) *Client {
 	return &Client{
 		APIKey: apiKey,
 		HTTPClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 120 * time.Second,
 		},
 	}
 }
@@ -121,4 +121,14 @@ func (c *Client) History(limit int) ([]byte, error) {
 		return nil, err
 	}
 	return c.DoRequest(req)
+}
+
+func (c *Client) ClearCache(domain string) error {
+	reqURL := fmt.Sprintf("%s/v1/cache/clear/%s", BaseURL, url.PathEscape(domain))
+	req, err := http.NewRequest("POST", reqURL, nil)
+	if err != nil {
+		return err
+	}
+	_, err = c.DoRequest(req)
+	return err
 }

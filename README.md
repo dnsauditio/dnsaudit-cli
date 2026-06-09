@@ -1,6 +1,7 @@
 # DNSAudit CLI
 
-A fast, robust, and professional command-line interface for the [DNSAudit.io](https://dnsaudit.io) API. Built specifically for DevOps teams, system administrators, and penetration testers to seamlessly run DNS security scans from the terminal.
+A fast and robust command line tool for interacting with the DNSAudit.io API.
+Audit domains, detect misconfigurations and monitor DNS changes from your terminal.
 
 ## Installation
 
@@ -8,7 +9,7 @@ As a Go binary, `dnsaudit` has zero dependencies. Simply compile the binary and 
 
 ```bash
 # Clone the repository
-git clone https://github.com/dnsaudit/cli dnsaudit-cli
+git clone https://github.com/dnsauditio/dnsaudit-cli
 cd dnsaudit-cli
 
 # Build for your current system
@@ -80,11 +81,24 @@ dnsaudit export -d example.com -f json -o output_file.json
 | **Global** | `--help` | `-h` | | Show help and usage for any command |
 | **`scan`** | `--domain` | `-d` | | **(Required)** The target domain to scan |
 | | `--json` | `-j` | `false` | Output the raw JSON response (ideal for piping into `jq`) |
+| | `--no-cache` | | `false` | Bypass the 24-hour cache and force a fresh scan |
 | **`history`**| `--limit` | `-l` | `10` | The maximum number of historical results to return (max `100`) |
 | | `--json` | `-j` | `false` | Output the raw JSON response |
 | **`export`** | `--domain` | `-d` | | **(Required)** The target domain to export data for |
 | | `--format` | `-f` | `pdf` | The export format (either `pdf` or `json`) |
 | | `--output` | `-o` | `<domain>-report.<fmt>`| Custom output file path |
+
+---
+
+## Caching Behavior
+
+By default, the DNSAudit API caches scan results for **24 hours** to ensure blazing-fast performance and reduce unnecessary load on upstream nameservers. 
+
+If you have just made a DNS change (like updating your SPF record) and need to verify it immediately, simply pass the `--no-cache` flag. This will seamlessly command the backend to flush the domain's cache and perform a deep, real-time security audit.
+
+```bash
+dnsaudit scan -d example.com --no-cache
+```
 
 ---
 

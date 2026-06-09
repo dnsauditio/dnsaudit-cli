@@ -13,6 +13,16 @@ import (
 var (
 	domain   string
 	jsonOut  bool
+	noCache  bool
+)
+
+// Terminal colors
+const (
+	colorReset  = "\033[0m"
+	colorBold   = "\033[1m"
+	colorRed    = "\033[31m"
+	colorOrange = "\033[33m" // Using yellow/orange ANSI
+	colorBlue   = "\033[34m"
 )
 
 var scanCmd = &cobra.Command{
@@ -31,9 +41,40 @@ var scanCmd = &cobra.Command{
 		}
 
 		client := api.NewClient(apiKey)
-		
+
+		if noCache {
+			_ = client.ClearCache(domain) // Silent request to clear cache
+		}
+
+		// Check if we are piped or redirecting
+		fileInfo, _ := os.Stdout.Stat()
+		isPiped := (fileInfo.Mode() & os.ModeCharDevice) == 0
+
+		disableColors := isPiped || NoColor
+		hideBanner := isPiped || Silent
+
 		if !jsonOut {
-			fmt.Printf("[*] Starting scan for %s...\n", domain)
+			if !hideBanner {
+				if !disableColors {
+					fmt.Println("+---------------------------------------+")
+					fmt.Printf("|   %sDNSAudit.io  CLI  v1.0.3%s            |\n", colorBold, colorReset)
+					fmt.Println("|   DNS Security from the terminal      |")
+					fmt.Println("+---------------------------------------+")
+					fmt.Printf("\n[*] Starting scan for %s...\n", domain)
+				} else {
+					fmt.Println("+---------------------------------------+")
+					fmt.Println("|   DNSAudit.io  CLI  v1.0.3            |")
+					fmt.Println("|   DNS Security from the terminal      |")
+					fmt.Println("+---------------------------------------+")
+					fmt.Printf("\n[*] Starting scan for %s...\n", domain)
+				}
+			} else {
+				// Even if silent, if not jsonOut we might just print starting scan or skip banner
+				// Let's print just the starting scan if silent but not piping
+				if !isPiped {
+					fmt.Printf("[*] Starting scan for %s...\n", domain)
+				}
+			}
 		}
 
 		result, err := client.Scan(domain)
@@ -57,10 +98,30 @@ var scanCmd = &cobra.Command{
 		fmt.Println("--------------------------------------------------------------------------------")
 		fmt.Printf("Target: %v\n", scanResult["domain"])
 		fmt.Printf("Status: %v\n", scanResult["status"])
-		
+
 		var gradeVal string
 		var scoreVal float64
+
+		var actualCritical, actualWarning, actualInfo int
+		var issuesList []interface{}
 		
+		if issues, ok := scanResult["issues"].([]interface{}); ok {
+			issuesList = issues
+			for _, issueInterface := range issuesList {
+				if issueMap, ok := issueInterface.(map[string]interface{}); ok {
+					if itype, ok := issueMap["type"].(string); ok {
+						if itype == "critical" {
+							actualCritical++
+						} else if itype == "warning" {
+							actualWarning++
+						} else if itype == "info" || itype == "informational" {
+							actualInfo++
+						}
+					}
+				}
+			}
+		}
+
 		if gradeMap, ok := scanResult["grade"].(map[string]interface{}); ok {
 			if g, exists := gradeMap["grade"].(string); exists {
 				gradeVal = g
@@ -68,19 +129,22 @@ var scanCmd = &cobra.Command{
 			if s, exists := gradeMap["score"].(float64); exists {
 				scoreVal = s
 			}
-			
-			fmt.Printf("\n[+] Security Grade: %s (Score: %.0f)\n", gradeVal, scoreVal)
+
+			if !disableColors {
+				fmt.Printf("\n%s[+] Security Grade: %s (Score: %.0f)%s\n", colorBold, gradeVal, scoreVal, colorReset)
+			} else {
+				fmt.Printf("\n[+] Security Grade: %s (Score: %.0f)\n", gradeVal, scoreVal)
+			}
+
 			if desc, exists := gradeMap["description"].(string); exists {
 				fmt.Printf("[*] %s\n", desc)
 			}
-			
-			if bd, ok := gradeMap["breakdown"].(map[string]interface{}); ok {
-				fmt.Println("\nIssues Breakdown:")
-				fmt.Printf("  Critical: %v\n", bd["critical"])
-				fmt.Printf("  Warning:  %v\n", bd["warning"])
-				fmt.Printf("  Info:     %v\n", bd["info"])
-			}
-			
+
+			fmt.Println("\nIssues Breakdown:")
+			fmt.Printf("  Critical: %v\n", actualCritical)
+			fmt.Printf("  Warning:  %v\n", actualWarning)
+			fmt.Printf("  Info:     %v\n", actualInfo)
+
 			if recs, ok := gradeMap["recommendations"].([]interface{}); ok && len(recs) > 0 {
 				fmt.Println("\nTop Recommendations:")
 				for _, r := range recs {
@@ -91,22 +155,26 @@ var scanCmd = &cobra.Command{
 			fmt.Printf("Grade:  %v (Score: %v)\n", scanResult["grade"], scanResult["securityScore"])
 		}
 
-		if issues, ok := scanResult["issues"].([]interface{}); ok && len(issues) > 0 {
-			fmt.Println("\nKey Findings:")
+		if len(issuesList) > 0 && (actualCritical > 0 || actualWarning > 0 || actualInfo > 0) {
+			if !disableColors {
+				fmt.Printf("\n%sKey Findings:%s\n", colorBold, colorReset)
+			} else {
+				fmt.Println("\nKey Findings:")
+			}
 			count := 0
-			for _, issueInterface := range issues {
-				if count >= 5 {
+			for _, issueInterface := range issuesList {
+				if count >= 8 {
 					fmt.Println("  ... and more (export to JSON/PDF to see all)")
 					break
 				}
 				if issueMap, ok := issueInterface.(map[string]interface{}); ok {
-					itype := issueMap["type"]
-					rtype := issueMap["recordType"]
+					itype := fmt.Sprintf("%v", issueMap["type"])
+					rtype := fmt.Sprintf("%v", issueMap["recordType"])
 					desc := issueMap["description"]
-					
+
 					// Remove newlines and truncate
 					descStr := fmt.Sprintf("%v", desc)
-					
+
 					// Basic newline removal for clean terminal output
 					descStrClean := ""
 					for _, ch := range descStr {
@@ -116,14 +184,27 @@ var scanCmd = &cobra.Command{
 							descStrClean += " - "
 						}
 					}
-					
+
 					if len(descStrClean) > 80 {
 						descStrClean = descStrClean[:77] + "..."
 					}
-					
-					// Only show warning or critical in the summary to keep it clean
-					if itype == "warning" || itype == "critical" {
-						fmt.Printf("  [%s] %s: %s\n", itype, rtype, descStrClean)
+
+					// We now show all types of issues, including informational
+					if itype == "warning" || itype == "critical" || itype == "info" || itype == "informational" {
+						typeStr := fmt.Sprintf("[%s]", itype)
+						if !disableColors {
+							switch itype {
+							case "critical":
+								typeStr = fmt.Sprintf("%s[%s]%s", colorRed, itype, colorReset)
+							case "warning":
+								typeStr = fmt.Sprintf("%s[%s]%s", colorOrange, itype, colorReset)
+							case "info", "informational":
+								typeStr = fmt.Sprintf("%s[%s]%s", colorBlue, "informational", colorReset) // Always display as informational
+							}
+						} else if itype == "info" {
+							typeStr = "[informational]" // Normalize string output when piped
+						}
+						fmt.Printf("  %s %s: %s\n", typeStr, rtype, descStrClean)
 						count++
 					}
 				}
@@ -136,5 +217,6 @@ var scanCmd = &cobra.Command{
 func init() {
 	scanCmd.Flags().StringVarP(&domain, "domain", "d", "", "Domain to scan (required)")
 	scanCmd.Flags().BoolVarP(&jsonOut, "json", "j", false, "Output raw JSON instead of formatted text")
+	scanCmd.Flags().BoolVar(&noCache, "no-cache", false, "Bypass cached results and force a fresh scan")
 	rootCmd.AddCommand(scanCmd)
 }
