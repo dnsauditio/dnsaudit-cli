@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/dnsaudit/cli/internal/api"
 	"github.com/dnsaudit/cli/internal/config"
@@ -171,21 +172,13 @@ var scanCmd = &cobra.Command{
 					rtype := fmt.Sprintf("%v", issueMap["recordType"])
 					desc := issueMap["description"]
 
-					// Remove newlines and truncate
+					// Extract just the title (the first line of the description)
 					descStr := fmt.Sprintf("%v", desc)
-
-					// Basic newline removal for clean terminal output
-					descStrClean := ""
-					for _, ch := range descStr {
-						if ch != '\n' && ch != '\r' {
-							descStrClean += string(ch)
-						} else if ch == '\n' {
-							descStrClean += " - "
-						}
-					}
-
-					if len(descStrClean) > 80 {
-						descStrClean = descStrClean[:77] + "..."
+					title := strings.SplitN(descStr, "\n", 2)[0]
+					
+					// Basic truncation just in case the title itself is incredibly long
+					if len(title) > 80 {
+						title = title[:77] + "..."
 					}
 
 					// We now show all types of issues, including informational
@@ -203,7 +196,7 @@ var scanCmd = &cobra.Command{
 						} else if itype == "info" {
 							typeStr = "[informational]" // Normalize string output when piped
 						}
-						fmt.Printf("  %s %s: %s\n", typeStr, rtype, descStrClean)
+						fmt.Printf("  %s %s: %s\n", typeStr, rtype, title)
 						count++
 					}
 				}
