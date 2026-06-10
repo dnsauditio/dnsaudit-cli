@@ -13,7 +13,6 @@ import (
 var (
 	domain   string
 	jsonOut  bool
-	noCache  bool
 )
 
 // Terminal colors
@@ -42,7 +41,7 @@ var scanCmd = &cobra.Command{
 
 		client := api.NewClient(apiKey)
 
-		if noCache {
+		if NoCache {
 			_ = client.ClearCache(domain) // Silent request to clear cache
 		}
 
@@ -157,9 +156,9 @@ var scanCmd = &cobra.Command{
 
 		if len(issuesList) > 0 && (actualCritical > 0 || actualWarning > 0 || actualInfo > 0) {
 			if !disableColors {
-				fmt.Printf("\n%sKey Findings:%s\n", colorBold, colorReset)
+				fmt.Printf("\n%sKey Findings:%s\n\n", colorBold, colorReset)
 			} else {
-				fmt.Println("\nKey Findings:")
+				fmt.Printf("\nKey Findings:\n\n")
 			}
 			count := 0
 			for _, issueInterface := range issuesList {
@@ -217,6 +216,5 @@ var scanCmd = &cobra.Command{
 func init() {
 	scanCmd.Flags().StringVarP(&domain, "domain", "d", "", "Domain to scan (required)")
 	scanCmd.Flags().BoolVarP(&jsonOut, "json", "j", false, "Output raw JSON instead of formatted text")
-	scanCmd.Flags().BoolVar(&noCache, "no-cache", false, "Bypass cached results and force a fresh scan")
 	rootCmd.AddCommand(scanCmd)
 }
