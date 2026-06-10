@@ -56,13 +56,13 @@ var scanCmd = &cobra.Command{
 			if !hideBanner {
 				if !disableColors {
 					fmt.Println("+---------------------------------------+")
-					fmt.Printf("|   %sDNSAudit.io  CLI  v1.0.3%s            |\n", colorBold, colorReset)
+					fmt.Printf("|   %sDNSAudit.io  CLI  v1.0.4%s            |\n", colorBold, colorReset)
 					fmt.Println("|   DNS Security from the terminal      |")
 					fmt.Println("+---------------------------------------+")
 					fmt.Printf("\n[*] Starting scan for %s...\n", domain)
 				} else {
 					fmt.Println("+---------------------------------------+")
-					fmt.Println("|   DNSAudit.io  CLI  v1.0.3            |")
+					fmt.Println("|   DNSAudit.io  CLI  v1.0.4            |")
 					fmt.Println("|   DNS Security from the terminal      |")
 					fmt.Println("+---------------------------------------+")
 					fmt.Printf("\n[*] Starting scan for %s...\n", domain)
