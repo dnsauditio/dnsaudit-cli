@@ -51,29 +51,17 @@ var scanCmd = &cobra.Command{
 		isPiped := (fileInfo.Mode() & os.ModeCharDevice) == 0
 
 		disableColors := isPiped || NoColor
-		hideBanner := isPiped || Silent
 
 		if !jsonOut {
+			PrintBanner()
+			// Even if silent, if not jsonOut and not piped, we might just print starting scan
+			// Actually, if it's silent, maybe we shouldn't print "Starting scan"?
+			// Let's keep existing logic: hideBanner = isPiped || Silent
+			hideBanner := isPiped || Silent
 			if !hideBanner {
-				if !disableColors {
-					fmt.Println("+---------------------------------------+")
-					fmt.Printf("|   %sDNSAudit.io  CLI  v1.0.4%s            |\n", colorBold, colorReset)
-					fmt.Println("|   DNS Security from the terminal      |")
-					fmt.Println("+---------------------------------------+")
-					fmt.Printf("\n[*] Starting scan for %s...\n", domain)
-				} else {
-					fmt.Println("+---------------------------------------+")
-					fmt.Println("|   DNSAudit.io  CLI  v1.0.4            |")
-					fmt.Println("|   DNS Security from the terminal      |")
-					fmt.Println("+---------------------------------------+")
-					fmt.Printf("\n[*] Starting scan for %s...\n", domain)
-				}
-			} else {
-				// Even if silent, if not jsonOut we might just print starting scan or skip banner
-				// Let's print just the starting scan if silent but not piping
-				if !isPiped {
-					fmt.Printf("[*] Starting scan for %s...\n", domain)
-				}
+				fmt.Printf("\n[*] Starting scan for %s...\n", domain)
+			} else if !isPiped {
+				fmt.Printf("[*] Starting scan for %s...\n", domain)
 			}
 		}
 
