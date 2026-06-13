@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Version = "v1.0.6"
+const Version = "v1.0.8"
 
 var (
 	Silent  bool
