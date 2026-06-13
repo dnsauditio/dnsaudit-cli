@@ -54,7 +54,7 @@ func Execute() {
 
 	rootCmd.SetHelpTemplate(customHelpTemplate)
 	// Usage is also printed when no args are provided
-	rootCmd.SetUsageTemplate(`{{banner}}Usage:{{if .Runnable}}
+	rootCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
 
